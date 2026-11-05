@@ -973,12 +973,15 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
    ZDJĘCIA: darmowe zdjęcia z Pexels (pexels.com/photo/...-NUMER).
    Żeby podmienić, zmień numer w adresie. Puste = szary kafelek.
    ============================================================ */
+// px(numer) = adres zdjęcia z Pexels o danym numerze
+const px = (id, w = 1200) => "https://images.pexels.com/photos/" + id + "/pexels-photo-" + id + ".jpeg?auto=compress&cs=tinysrgb&w=" + w;
+// Zamiast jednego adresu możesz podać listę [a, b, c]: jeśli pierwszy się nie załaduje, strona spróbuje następnego.
 const PHOTOS = {
   hero:     "https://images.pexels.com/photos/374861/pexels-photo-374861.jpeg?auto=compress&cs=tinysrgb&w=2000",  // stolarz przy pracy, warsztat, poziome
   kuchnia:  "https://images.pexels.com/photos/100575/pexels-photo-100575.jpeg?auto=compress&cs=tinysrgb&w=1200",  // kuchnia z dębowymi frontami
   szafa:    "https://images.pexels.com/photos/6585617/pexels-photo-6585617.jpeg?auto=compress&cs=tinysrgb&w=1200",  // garderoba lub szafa w zabudowie
   schody:   "https://images.pexels.com/photos/922793/pexels-photo-922793.jpeg?auto=compress&cs=tinysrgb&w=1200",  // drewniane schody we wnętrzu
-  stol:     "https://images.pexels.com/photos/3773579/pexels-photo-3773579.jpeg?auto=compress&cs=tinysrgb&w=1200",  // stół z litego drewna w jadalni
+  stol:     [px(8113036), px(3288102), px(11295813), px(3773579)],  // stół z litego drewna w jadalni (kolejne to zapasowe)
   lazienka: "https://images.pexels.com/photos/5869312/pexels-photo-5869312.jpeg?auto=compress&cs=tinysrgb&w=1200",  // drewniana szafka łazienkowa
   real1:    "https://images.pexels.com/photos/4119836/pexels-photo-4119836.jpeg?auto=compress&cs=tinysrgb&w=1200",  // realizacje: 6 zdjęć gotowych mebli
   real2:    "https://images.pexels.com/photos/8134812/pexels-photo-8134812.jpeg?auto=compress&cs=tinysrgb&w=1200",
@@ -1004,13 +1007,18 @@ document.querySelectorAll("[data-photo]").forEach(fig => {
   label.className = "ph-label";
   label.innerHTML = '<svg aria-hidden="true"><use href="#rings"/></svg><span>Zdjęcie: ' + (PH_LABELS[key] || key) + "</span>";
   fig.appendChild(label);
-  const src = PHOTOS[key];
-  if (!src) { fig.classList.add("is-empty"); return; }
+  // kolejka adresów: każdy JPEG z Pexels próbujemy też jako PNG
+  const queue = [].concat(PHOTOS[key] || []).filter(Boolean)
+    .flatMap(u => /pexels-photo-\d+\.jpeg/.test(u) ? [u, u.replace(".jpeg", ".png")] : [u]);
+  if (!queue.length) { fig.classList.add("is-empty"); return; }
   img.loading = key === "hero" ? "eager" : "lazy";
   img.decoding = "async";
-  img.addEventListener("load", () => fig.classList.add("is-loaded"));
-  img.addEventListener("error", () => fig.classList.add("is-empty"));
-  img.src = src;
+  img.addEventListener("load", () => { fig.classList.remove("is-empty"); fig.classList.add("is-loaded"); });
+  img.addEventListener("error", () => {
+    if (queue.length) img.src = queue.shift();
+    else fig.classList.add("is-empty");
+  });
+  img.src = queue.shift();
 });
 
 /* ===== Menu mobilne ===== */
